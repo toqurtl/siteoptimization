@@ -61,7 +61,7 @@ class ScheduleInformation(object):
 
     def to_schedule(self):
         for work_type_idx, work_type in self.work_type_dict.items():
-
+            num_activity = work_type.get_num_activity(self.__total_unit)
 
 
 class Schedule(object):
