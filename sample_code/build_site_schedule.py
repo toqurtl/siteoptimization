@@ -3,7 +3,7 @@ from module_site.core.cpm import CPM
 from module_site.visualization import schedule_visualization
 
 schedule_info = ScheduleInformation()
-schedule_info.get_work_type_from_file('sample_data/sample_2.csv')
+schedule_info.get_work_type_from_file('../sample_data/sample_2.csv')
 schedule_info.modular_unit_rate = 4
 schedule_info.unit_install_time = 30
 schedule_info.num_unit_in_floor = 10
