@@ -11,7 +11,6 @@ class WorkType(object):
             self.manhour = int(info.get('manhour'))
             self.num_labor = int(info.get('num_labor'))
             self.num_unit_in_group = int(info.get('num_unit_in_group'))
-            self.productivity = int(info.get('productivity'))
         except TypeError:
             pass
 
@@ -23,7 +22,7 @@ class WorkType(object):
             exit()
             return 0
         else:
-            return round((self.num_unit_in_group * self.manhour) / (self.num_labor * self.productivity))
+            return math.ceil((self.num_unit_in_group * self.manhour) / (self.num_labor * self.num_unit_in_group))
 
     def get_num_group(self, total_unit):
         return math.ceil(total_unit / self.num_unit_in_group)

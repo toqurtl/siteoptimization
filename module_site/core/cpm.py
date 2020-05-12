@@ -12,8 +12,6 @@ class CPM(nx.DiGraph):
 
     # convert schedule to network
     def __schedule_to_network(self, schedule):
-        # add unit_arrived_buffer to network as node
-
         # add activity to network as node
         for act in schedule.activity_dict.values():
             self.add_node(act.id, act=act)
