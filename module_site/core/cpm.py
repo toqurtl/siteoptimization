@@ -12,23 +12,18 @@ class CPM(nx.DiGraph):
         self._make_span = -1
 
     # convert schedule to network
-    def _worktype_to_activity(self, schedule_information):
-        pass
-
-
-    def _schedule_to_network(self, schedule):
-        # TODO
+    def __schedule_to_network(self, schedule):
         # add activity to network as node
         for act in schedule.activity_dict.values():
             self.add_node(act.id, act=act)
         # add dependency to network as edge
-        for dep in schedule.dependency_list:
-            self.add_edges_from([(dep[0], dep[1])])
+        for pre, act in schedule.dependency_list:
+            self.add_edges_from([(pre.id, act.id)])
 
     # critical path calculation
     def compute_critical_path(self, schedule):
         self.clear()
-        self._schedule_to_network(schedule)
+        self.__schedule_to_network(schedule)
         self._update()
         schedule.critical_path = self._get_critical_path()
 

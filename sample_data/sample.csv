@@ -1,4 +1,4 @@
 id,manhour,num_labor,num_unit_in_group,productivity
-A,240,4,4,60
-B,240,2,2,120
-C,240,3,3,40
+A,240,2,4,6
+B,240,2,2,12
+C,240,2,2,4
