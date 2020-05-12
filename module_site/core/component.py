@@ -23,7 +23,7 @@ class WorkType(object):
             exit()
             return 0
         else:
-            return (self.num_unit_in_group * self.manhour) / (self.num_labor * self.productivity)
+            return round((self.num_unit_in_group * self.manhour) / (self.num_labor * self.productivity))
 
     def get_num_group(self, total_unit):
         return math.ceil(total_unit / self.num_unit_in_group)
@@ -40,13 +40,19 @@ dict_arrived = {
 }
 
 floor_buffer = {
-    'order': -1,
+    'order': 2,
     'id': 'floor_buffer'
+}
+
+dict_arrived_interval = {
+    'order': -1,
+    'id': 'arrived_interval'
 }
 
 work_type_installation = WorkType(**dict_installation)
 work_type_arrived = WorkType(**dict_arrived)
 work_type_floor_buffer = WorkType(**floor_buffer)
+work_type_arrived_interval = WorkType(**dict_arrived_interval)
 
 
 class Activity(object):
@@ -97,10 +103,19 @@ class ScheduleInformation(object):
         self.work_type_dict = {}
         self.__total_unit = 0
         self.__modular_unit_rate = 0
+        self.__unit_arrived_interval = 0
         self.__unit_install_time = 0
         self.__num_unit_in_floor = 0
         self.__num_floor = 0
         self.__floor_buffer = 0
+
+    @property
+    def unit_arrived_interval(self):
+        return self.__unit_arrived_interval
+
+    @unit_arrived_interval.setter
+    def unit_arrived_interval(self, unit_arrived_interval):
+        self.__unit_arrived_interval = unit_arrived_interval
 
     @property
     def floor_buffer(self):
@@ -156,13 +171,14 @@ class ScheduleInformation(object):
     def get_work_type_from_file(self, filename):
         work_types = pd.read_csv(filename)
         for order, type_info in work_types.iterrows():
-            work_type = WorkType(order + 2, **type_info.to_dict())
+            work_type = WorkType(order + 3, **type_info.to_dict())
             self.work_type_dict[work_type.id] = work_type
 
     def to_schedule(self):
         schedule = Schedule()
         schedule.floor_buffer = self.__floor_buffer
         schedule.num_unit_in_floor = self.__num_unit_in_floor
+        schedule.unit_arrived_interval = self.__unit_arrived_interval
         self.__unit_to_activity(schedule)
         self.__floor_to_activity(schedule)
         self.__work_type_to_activity(schedule)
@@ -174,6 +190,7 @@ class ScheduleInformation(object):
 
     def __unit_to_activity(self, schedule):
         total_arrived_idx = self.get_unit_arrived_idx()
+        # arrived
         for arrived_idx in range(0, total_arrived_idx):
             key = (work_type_arrived.id, arrived_idx)
             act = Activity(work_type_arrived, arrived_idx)
@@ -184,6 +201,18 @@ class ScheduleInformation(object):
             act.duration = 0
             schedule.activity_dict[key] = act
 
+        # arrived_interval
+        for arrived_idx in range(1, total_arrived_idx):
+            key = (work_type_arrived_interval.id, arrived_idx)
+            act = Activity(work_type_arrived_interval, arrived_idx)
+            for unit_idx in range(0, self.__modular_unit_rate):
+                idx = arrived_idx * self.__modular_unit_rate + unit_idx
+                if self.total_unit > idx:
+                    act.allocated_module_list.append(idx)
+            act.duration = self.__unit_arrived_interval
+            schedule.activity_dict[key] = act
+
+        # unit_installation
         for idx in range(0, self.__total_unit):
             key = (work_type_installation.id, idx)
             act = Activity(work_type_installation, idx)
@@ -223,6 +252,8 @@ class Schedule(object):
         self.dependency_list = []
         self.floor_buffer = 0
         self.num_unit_in_floor = 0
+        self.unit_arrived_interval = 0
+        self.project_duration = 0
 
     def get_activity_list_with_work_type(self, work_type_idx):
         activity_list = []
@@ -257,11 +288,24 @@ class Schedule(object):
     def __find_predecessors_of_activity(self, activity):
         predecessor_list = []
         self.__find_same_type_predecessor(activity, predecessor_list)
+        self.__find_arrived_interval_predecessor(activity, predecessor_list)
         self.__find_other_type_predecessor(activity, predecessor_list)
         self.__find_floor_predecessor(activity, predecessor_list)
         return predecessor_list
 
+    def __find_arrived_interval_predecessor(self, activity, predecessor_list):
+        exist, predecessor = activity.order == -1, None
+        if exist:
+            predecessor_key = (dict_arrived['id'], activity.idx - 1)
+            successor_key = (dict_arrived['id'], activity.idx)
+            predecessor = self.activity_dict[predecessor_key]
+            successor = self.activity_dict[successor_key]
+            predecessor_list.append((predecessor, activity))
+            predecessor_list.append((activity, successor))
+        return exist
+
     def __find_same_type_predecessor(self, activity, predecessor_list):
+        # exist, predecessor = activity.idx != 0 and activity.order != 2, None
         exist, predecessor = activity.idx != 0 and activity.order != -1, None
         if exist:
             predecessor_key = (activity.work_type.id, activity.idx - 1)
@@ -270,25 +314,26 @@ class Schedule(object):
         return exist
 
     def __find_floor_predecessor(self, activity, predecessor_list):
-        exist, predecessor = activity.order > 1, None
+        exist, predecessor = activity.order == 3, None
         last_unit = activity.allocated_module_list[-1]
         required_unit = last_unit + self.floor_buffer * self.num_unit_in_floor
         if exist:
             floor_constraint = False
-            floor_activity_list = self.get_activity_list_with_order(-1)
+            floor_activity_list = self.get_activity_list_with_order(2)
             for floor_act in reversed(floor_activity_list):
                 if required_unit in floor_act.allocated_module_list:
                     predecessor = floor_act
                     predecessor_list.append((predecessor, activity))
                     floor_constraint = True
                     break
+
         if exist and floor_constraint is True and predecessor is None:
             print('find floor type predecessor logic is wrong')
             exit()
         return exist
 
     def __find_other_type_predecessor(self, activity, predecessor_list):
-        exist, predecessor = activity.order > 0, None
+        exist, predecessor = activity.order > 3 or activity.order == 2, None
         last_unit = activity.allocated_module_list[-1]
         if exist:
             other_type_list = self.get_activity_list_with_order(activity.order - 1)

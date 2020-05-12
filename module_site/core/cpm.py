@@ -1,5 +1,4 @@
 import networkx as nx
-from .component import Activity, Schedule, WorkType, ScheduleInformation
 
 
 class CPM(nx.DiGraph):
@@ -13,6 +12,8 @@ class CPM(nx.DiGraph):
 
     # convert schedule to network
     def __schedule_to_network(self, schedule):
+        # add unit_arrived_buffer to network as node
+
         # add activity to network as node
         for act in schedule.activity_dict.values():
             self.add_node(act.id, act=act)
@@ -26,6 +27,7 @@ class CPM(nx.DiGraph):
         self.__schedule_to_network(schedule)
         self._update()
         schedule.critical_path = self._get_critical_path()
+        schedule.project_duration = self._make_span
 
     def _forward(self):
         for n in nx.topological_sort(self):
