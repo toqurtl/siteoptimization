@@ -38,7 +38,7 @@ dict_arrived = {
     'id': 'unit_arrived'
 }
 
-floor_buffer = {
+dict_floor_buffer = {
     'order': 2,
     'id': 'floor_buffer'
 }
@@ -50,7 +50,7 @@ dict_arrived_interval = {
 
 work_type_installation = WorkType(**dict_installation)
 work_type_arrived = WorkType(**dict_arrived)
-work_type_floor_buffer = WorkType(**floor_buffer)
+work_type_floor_buffer = WorkType(**dict_floor_buffer)
 work_type_arrived_interval = WorkType(**dict_arrived_interval)
 
 

@@ -18,6 +18,7 @@ floor_list = schedule.get_activity_list_with_work_type('floor_buffer')
 
 schedule.print_dependency_list()
 
+
 # visualization
 # file path have to be absolute path
 # file_path = 'D:\\inseok\\PythonProject\\siteoptimization\\result.xlsx'
