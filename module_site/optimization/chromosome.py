@@ -43,7 +43,7 @@ class BinaryChromosome(object):
         chromosome_list = []
         for chromosome_idx in range(0, num_chromosome):
             while len(chromosome_list) < num_chromosome:
-                chromosome_str = cls.__get_random_chromosome()
+                chromosome_str = cls.get_random_chromosome()
                 if chromosome_str not in chromosome_list:
                     chromosome_list.append(chromosome_str)
                 else:
@@ -128,7 +128,7 @@ class BinaryChromosome(object):
             cls.len_str_chromosome += content['digit'] * content['num']
 
     @classmethod
-    def __get_random_chromosome(cls):
+    def get_random_chromosome(cls):
         chromosome_str = ''
         for key, elements in cls.geno_position.items():
             min_value = cls.geno_shape[key]['min']

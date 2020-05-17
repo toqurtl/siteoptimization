@@ -6,7 +6,6 @@ import time
 
 class BinaryGeneric(object):
 
-
     @classmethod
     def change_ith_gene(cls, chro_str, idx):
         insert_str = '0' if chro_str[idx] == '1' else '1'
@@ -69,6 +68,40 @@ class BinaryGeneric(object):
                 best_chro, best_value = new_chro, new_value
         return best_chro
 
+
+class BinaryOperator(object):
+
+    @classmethod
+    def superior(cls, generation, num_chromosome):
+        pass
+
+    @classmethod
+    def selection(cls, generation, num_chromosome):
+        pass
+
+    @classmethod
+    def multi_point_crossover(cls, generation, num_chromosome):
+        pass
+
+    @classmethod
+    def one_point_crossover(cls, generation, num_chromosome):
+        pass
+
+    @classmethod
+    def random_crossover(cls, generation, num_chromosome):
+        pass
+
+    @classmethod
+    def local_mutation(cls, generation, num_chromosome):
+        pass
+
+    @classmethod
+    def global_mutation(cls, generation, num_chromosome):
+        pass
+
+    @classmethod
+    def local_algorithm_lk(cls, generation, num_chromosome):
+        pass
 
 class Fronting(object):
     num_objective = 0
@@ -145,10 +178,10 @@ class Fronting(object):
 
 
 class GenericEnum(Enum):
-    SELECTION: BinaryGeneric.selection
-    ONE_POINT_CROSSOVER: BinaryGeneric.one_point_crossover
-    MULTI_POINT_CROSSOVER: BinaryGeneric.multi_point_crossover
-    RANDOM_CROSSOVER: BinaryGeneric.random_crossover
-    LOCAL_MUTATION: BinaryGeneric.local_mutation
-    GLOBAL_MUTATION: BinaryGeneric.global_mutation
-    LOCAL_OPTIMIZATION_KL: BinaryGeneric.local_algorithm_lk
+    SELECTION = BinaryOperator.selection
+    ONE_POINT_CROSSOVER = BinaryOperator.one_point_crossover
+    MULTI_POINT_CROSSOVER = BinaryOperator.multi_point_crossover
+    RANDOM_CROSSOVER = BinaryOperator.random_crossover
+    LOCAL_MUTATION = BinaryOperator.local_mutation
+    GLOBAL_MUTATION = BinaryOperator.global_mutation
+    LOCAL_OPTIMIZATION_KL = BinaryOperator.local_algorithm_lk

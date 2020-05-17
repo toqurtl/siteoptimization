@@ -1,6 +1,16 @@
 import numpy as np
 from .generic import BinaryGeneric
 
+class NextGeneration:
+
+    def __init__(self):
+        pass
+
+    def next_generation(cls, pre_generation):
+        for chro in pre_generation:
+            pass
+
+
 
 class Generation(list):
     pass
