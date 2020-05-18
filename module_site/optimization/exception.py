@@ -11,3 +11,10 @@ class BinaryChromosomeBoundaryError(Exception):
         else:
             check = True
 
+
+class HyperParameterSettingError(Exception):
+    def __init__(self):
+        msg = "sum of each operator ratio have to be 1"
+        super().__init__(msg)
+
+

@@ -66,6 +66,14 @@ class BinaryChromosome(object):
         return pheno_info
 
     @classmethod
+    def get_phenotype_part(cls, chromosome, key):
+        value_str=''
+        position_list = cls.geno_position[key]
+        for min_pos, max_pos in position_list:
+            value_str += chromosome[min_pos:max_pos]
+        return value_str
+
+    @classmethod
     def get_genotype(cls, **element_info):
         chromosome = ''
         for key, elements in element_info.items():
