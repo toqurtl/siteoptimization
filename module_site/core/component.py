@@ -15,9 +15,9 @@ class WorkType(object):
             pass
 
     def get_duration(self):
-        if self.id is 'unit_arrived':
+        if self.id == 'unit_arrived':
             return 0
-        elif self.id is 'unit_installation':
+        elif self.id == 'unit_installation':
             print('unit_installation work_type cannot use this function')
             exit()
             return 0

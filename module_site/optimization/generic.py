@@ -17,8 +17,8 @@ class BinaryGeneric(object):
         pass
 
     @classmethod
-    def superior(cls, generation):
-        pass
+    def superior(cls, generation, idx):
+        return generation[idx]
 
     @classmethod
     def random_crossover(cls, chro_1, chro_2):
@@ -69,19 +69,33 @@ class BinaryGeneric(object):
         return best_chro
 
 
+def fill_chromosome_list(func):
+    def wrapper_function(*args):
+        chromosome_list = []
+        while len(chromosome_list) < args[1]:
+            new_chromosome = func(*args)
+            check_1 = new_chromosome not in args[0]
+            check_2 = new_chromosome not in chromosome_list
+            if check_1 and check_2:
+                chromosome_list.append(new_chromosome)
+
+
 class BinaryOperator(object):
 
     @classmethod
     def superior(cls, generation, num_chromosome):
-        pass
+        return generation[:num_chromosome]
 
     @classmethod
+    @fill_chromosome_list
     def selection(cls, generation, num_chromosome):
         pass
 
     @classmethod
+    @fill_chromosome_list
     def multi_point_crossover(cls, generation, num_chromosome):
-        pass
+        chro_1 = BinaryGeneric.selection(generation)
+        return BinaryGeneric.multi_point_crossover()
 
     @classmethod
     def one_point_crossover(cls, generation, num_chromosome):
@@ -143,7 +157,7 @@ class Fronting(object):
             new_front = (rank, [])
             for chromosome_1, objective_1 in not_fronted_chromosome_list:
                 num_dominates = sum([1 for chromosome_2, objective_2 in not_fronted_chromosome_list if objective_1 < objective_2])
-                if num_dominates is 0:
+                if num_dominates == 0:
                     new_front[1].append((chromosome_1, objective_1))
             for chromosome in new_front[1]:
                 not_fronted_chromosome_list.remove(chromosome)
