@@ -64,11 +64,11 @@ class BinaryLocalAlgorithm(Enum):
             compare_array = best_value <= func(new_chro)
             if reduce(lambda x, y: x & y, compare_array):
                 best_chro, best_value = new_chro, new_value
-        return best_chro
+        return best_chro, best_value
 
     @classmethod
-    def local_algorithm_none(cls, chro_str):
-        return chro_str
+    def local_algorithm_none(cls, chro_str, func):
+        return chro_str, func(chro_str)
 
     NONE = local_algorithm_none
     LK = local_algorithm_lk

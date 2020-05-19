@@ -4,7 +4,7 @@ from .exception import HyperParameterSettingError
 import random
 import numpy as np
 from enum import Enum
-
+from functools import reduce
 
 class Fronting(object):
     num_objective = 0
@@ -13,48 +13,65 @@ class Fronting(object):
     front_list = []
 
     @classmethod
+    def fronting(cls, generation):
+        cls.__initialize()
+        cls.__set_max_min_list(generation)
+        cls.__fronting(generation)
+        cls.__set_crowding_distance()
+
+    @classmethod
     def __initialize(cls):
         cls.max_objective_list.clear()
         cls.min_objective_list.clear()
         cls.front_list.clear()
 
     @classmethod
-    def fronting(cls, generation):
-        cls.__set_max_min_list(generation)
-        cls.__fronting(generation)
-        cls.__set_crowding_distance()
-
-    @classmethod
     # generation is the list contains chromosome information as tuple
     def __set_max_min_list(cls, generation):
-        for idx in range(0, cls.num_objective):
-            chromosome_objective_list = list(map(lambda chro_info_tuple: chro_info_tuple[1][1], generation))
-            cls.max_objective_list.append(max(chromosome_objective_list))
-            cls.min_objective_list.append(min(chromosome_objective_list))
+        objective_values = [chromosome_info[1] for chromosome_info in generation]
+        objective_values = np.array(objective_values)
+        cls.max_objective_list = np.max(objective_values, axis=0)
+        cls.min_objective_list = np.min(objective_values, axis=0)
 
+
+    def __check_dominate(cls, nparray):
+        dominated_condition_1 = np.sum(nparray[:-1]) == cls.num_objective
+        dominated_condition_2 = np.sum(nparray[:])
     @classmethod
     # front - (rank, chromosome_info_list)
     # chromosome_info = chromosome, objective, crowding_distance
     def __fronting(cls, generation):
-        not_fronted_chromosome_list = []
-        for chromo_info in generation:
-            not_fronted_chromosome_list.append(chromo_info)
-        infinite_check = 0
-        rank = 0
-        while len(not_fronted_chromosome_list) > 0:
-            infinite_check += 1
-            new_front = (rank, [])
-            for chromosome_1, objective_1 in not_fronted_chromosome_list:
-                num_dominates = sum([1 for chromosome_2, objective_2 in not_fronted_chromosome_list if objective_1 < objective_2])
-                if num_dominates is 0:
-                    new_front[1].append((chromosome_1, objective_1))
-            for chromosome in new_front[1]:
-                not_fronted_chromosome_list.remove(chromosome)
-            rank += 1
+        not_fronted_chromosome_dict = {}
+        for chromosome, objective_values in generation:
+            not_fronted_chromosome_dict[chromosome] = objective_values
+
+        objective_value_list = np.array([chromosome_info[1] for chromosome_info in generation])
+        while len(not_fronted_chromosome_dict) > 0:
+            new_front = []
+            dominated_list = []
+            for chromosome, objective_1 in not_fronted_chromosome_dict.items():
+                compare_array = objective_value_list > objective_1
+                # equal_array = objective_value_list == objective_1
+                # equal_array = np.apply_along_axis(lambda a: np.sum(a) == cls.num_objective - 1, 1, equal_array)
+                # equal_array = np.expand_dims(equal_array, axis=0)
+                # compare_array = np.concatenate((compare_array, equal_array.T), axis=1)
+                compare_array = np.apply_along_axis(
+                    lambda a: np.sum(a) == 1 or np.sum(a) == cls.num_objective, compare_array)
+                print(compare_array)
+                compare_array = reduce(lambda x, y: x & y, compare_array.T)
+
+
+                print(compare_array)
+                dominated = reduce(lambda x, y: x or y, compare_array)
+                dominated_list.append(dominated)
+                if not dominated:
+                    new_front.append((chromosome, objective_1))
+            for chromosome, objective_1 in new_front:
+                del not_fronted_chromosome_dict[chromosome]
+            objective_value_list = objective_value_list[dominated_list]
             cls.front_list.append(new_front)
-            if infinite_check >= 1000:
-                print('infinite loop in _fronting function in front.py')
-                exit()
+            exit()
+
 
     @classmethod
     def __set_crowding_distance(cls):
@@ -63,15 +80,13 @@ class Fronting(object):
 
     @classmethod
     def __crowd_distancing_in_the_front(cls, front):
-        rank, chro_info_list = front
-        objective_diff_list = np.array(cls.max_objective_list) - np.array(cls.min_objective_list)
-        for idx, chro_info in enumerate(chro_info_list):
-            chromosome, objectives, _ = chro_info
+        objective_diff_list = cls.max_objective_list - cls.min_objective_list
+        for idx, chromosome_info in enumerate(front):
+            chromosome, objectives = chromosome_info[0], chromosome_info[1]
             try:
-                previous_chromosome, previous_objectives = chro_info_list[idx - 1]
-                behind_chromosome, behind_objectives = chro_info_list[idx + 1]
-                crowding_distance_list = (np.array(previous_objectives) + np.array(behind_objectives)) \
-                                                  / np.array(objective_diff_list)
+                previous_chromosome, previous_objectives = front[idx - 1][0], front[idx - 1][1]
+                behind_chromosome, behind_objectives = front[idx + 1][0], front[idx + 1][1]
+                crowding_distance_list = (previous_objectives + behind_objectives) / objective_diff_list
                 crowding_distance = crowding_distance_list.sum()
                 return chromosome, objectives, crowding_distance
             except ZeroDivisionError:
@@ -81,18 +96,22 @@ class Fronting(object):
 
 
 # this script define methodology to make next generation
+# chromosome_info -> numpy (chromosome, objective value)
 def fill_chromosome_list(func):
+    chromosome_info_list = []
     chromosome_list = []
 
     def wrapper_function(*args):
         generation, num_chromosome = args[0].generation, args[1]
+        pre_chromosome_list = generation.T[0]
         local_algorithm, fitness_func = args[0].local_algorithm_enum, args[0].fitness_func
         while len(chromosome_list) < num_chromosome:
             new_chromosome = func(*args)
-            new_chromosome = local_algorithm(new_chromosome, fitness_func)
-            if (new_chromosome not in generation) and (new_chromosome not in chromosome_list):
+            new_chromosome, objective_values = local_algorithm(new_chromosome, fitness_func)
+            if new_chromosome not in pre_chromosome_list and new_chromosome not in chromosome_list:
+                chromosome_info_list.append((new_chromosome, objective_values))
                 chromosome_list.append(new_chromosome)
-        return chromosome_list
+        return chromosome_info_list
     return wrapper_function
 
 
@@ -103,12 +122,10 @@ class MultiObjectiveGenerator(object):
         self.fitness_func = fitness_func
         self.generic_parameter_dict = generic_parameter_dict
         self.__check_genericparameter()
-        self.generation = []
+        self.generation = np.array([])
 
     def set_generation(self, generation):
-        self.generation.clear()
-        for chromosome in generation:
-            self.generation.append(chromosome)
+        self.generation = generation
 
     @property
     def local_algorithm_enum(self):
@@ -121,11 +138,15 @@ class MultiObjectiveGenerator(object):
     def clear(self):
         self.generation.clear()
 
-    def get_new_generation(self):
-        pass
+    def get_new_generation(self, num_chromosome_in_generation):
+        new_generation = []
+        for generic_function, generic_ratio in self.generic_parameter_dict.items():
+            num = int(generic_ratio * num_chromosome_in_generation)
+            new_generation += generic_function(self, num)
+        return np.array(new_generation)
 
     def superior(self, num_chromosome):
-        return self.generation[:num_chromosome]
+        return self.generation[:num_chromosome].tolist()
 
     @fill_chromosome_list
     def multi_point_crossover(self, num_chromosome):
@@ -156,7 +177,7 @@ class MultiObjectiveGenerator(object):
 
     def __get_random_chromosome(self):
         random_idx = random.randint(0, len(self.generation)-1)
-        return self.generation[random_idx]
+        return self.generation[random_idx][0]
 
     def __check_genericparameter(self):
         if sum(list(self.generic_parameter_dict.values())) != 1:
