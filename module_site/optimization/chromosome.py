@@ -1,6 +1,6 @@
 import numpy as np
 import random
-
+from .exception import GenoTypeRangeException
 
 def decimal_to_binary_with_integer(num, num_digit):
     return format(num, 'b').zfill(num_digit)
@@ -51,6 +51,7 @@ class BinaryChromosome(object):
 
         return chromosome_list
 
+
     @classmethod
     def get_phenotype(cls, chromosome):
         # TODO - check chromosome genotype function
@@ -61,17 +62,32 @@ class BinaryChromosome(object):
             for min_pos, max_pos in position_list:
                 value_str = chromosome[min_pos:max_pos]
                 value_list.append(binary_to_decimal(value_str))
-
             pheno_info[key] = np.array(value_list)
         return pheno_info
 
     @classmethod
-    def get_phenotype_part(cls, chromosome, key):
-        value_str=''
+    def get_phenotype_content(cls, chromosome, key):
+        value_str = cls.get_chromosome_content(chromosome, key)
+        return binary_to_decimal_with_digit(value_str, cls.geno_shape[key]['digit'])
+
+    @classmethod
+    def get_chromosome_content(cls, chromosome, key):
+        value_str = ''
         position_list = cls.geno_position[key]
         for min_pos, max_pos in position_list:
             value_str += chromosome[min_pos:max_pos]
         return value_str
+
+    @classmethod
+    def get_chromosome_element(cls, chromosome, key, idx):
+        min_pos, max_pos = cls.geno_position[key][idx]
+        return chromosome[min_pos:max_pos]
+
+
+    @classmethod
+    def get_phenotype_element(cls, chromosome, key, idx):
+        min_pos, max_pos = cls.geno_position[key][idx]
+        return binary_to_decimal(chromosome[min_pos:max_pos])
 
     @classmethod
     def get_genotype(cls, **element_info):
@@ -101,12 +117,14 @@ class BinaryChromosome(object):
 
     @classmethod
     def __check_bound_info(cls, geno_info):
-        if geno_info['min'] < 0:
+        lower_bound = 0
+        upper_bound = pow(2, geno_info['digit'])
+        if geno_info['min'] < lower_bound:
             check = False
-            print('min value have to be positive')
-        elif geno_info['max'] >= pow(2, geno_info['digit']):
+            raise GenoTypeRangeException(1, lower_bound, geno_info['min'])
+        elif geno_info['max'] >= upper_bound:
             check = False
-            print('max value have to be smaller than num_digit')
+            raise GenoTypeRangeException(0, upper_bound, geno_info['max'])
         else:
             check = True
         return check
@@ -144,7 +162,6 @@ class BinaryChromosome(object):
             for idx in range(0, cls.geno_shape[key]['num']):
                 rand_num = random.randint(min_value, max_value)
                 chromosome_str += decimal_to_binary_with_integer(rand_num, cls.geno_shape[key]['digit'])
-
         return chromosome_str
 
 

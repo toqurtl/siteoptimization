@@ -18,3 +18,14 @@ class HyperParameterSettingError(Exception):
         super().__init__(msg)
 
 
+class GenoTypeRangeException(Exception):
+    def __init__(self, order, threshold, input_value):
+        if order == 1:
+            msg = 'min value have to be positive - '
+            msg += 'threshold: ' + str(threshold) + '  input value: ' + str(input_value)
+        else:
+            msg = 'max value have to be smaller than num_digit - '
+            msg += 'threshold: ' + str(threshold) + '  input value: ' + str(input_value)
+        super().__init__(msg)
+
+

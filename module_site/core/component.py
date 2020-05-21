@@ -1,5 +1,6 @@
 import pandas as pd
 import math
+from enum import Enum
 
 
 class WorkType(object):
@@ -7,12 +8,37 @@ class WorkType(object):
         # id can't be 'unit_arrived' and 'unit_installation'
         self.order = order
         self.id = info.get('id')
+        self.manhour = int(str(info.get('manhour')))
         try:
-            self.manhour = int(info.get('manhour'))
-            self.num_labor = int(info.get('num_labor'))
-            self.num_unit_in_group = int(info.get('num_unit_in_group'))
+            self.values = {
+                'num_labor': int(info.get('num_labor')),
+                'num_unit_in_group': int(info.get('num_unit_in_group'))
+            }
         except TypeError:
-            pass
+            self.values = {
+                'num_labor': 1,
+                'num_unit_in_group': 1
+            }
+
+    def __str__(self):
+        return str(self.order) + ' '+ str(self.id) + ' ' + str(self.manhour) + \
+               ' ' + str(self.num_labor) + ' ' + str(self.num_unit_in_group)
+
+    @property
+    def num_unit_in_group(self):
+        return self.values['num_unit_in_group']
+
+    @num_unit_in_group.setter
+    def num_unit_in_group(self, num_unit_in_group):
+        self.values['num_unit_in_group'] = num_unit_in_group
+
+    @property
+    def num_labor(self):
+        return self.values['num_labor']
+
+    @num_labor.setter
+    def num_labor(self, num_labor):
+        self.values['num_labor'] = num_labor
 
     def get_duration(self):
         if self.id == 'unit_arrived':
@@ -30,23 +56,35 @@ class WorkType(object):
 
 dict_installation = {
     'id': 'unit_installation',
-    'order': 1,
+    'order': -1,
+    'manhour': 0
 }
 
 dict_arrived = {
-    'order': 0,
-    'id': 'unit_arrived'
+    'order': -2,
+    'id': 'unit_arrived',
+    'manhour': 0
 }
 
 dict_floor_buffer = {
-    'order': 2,
-    'id': 'floor_buffer'
+    'order': 0,
+    'id': 'floor_buffer',
+    'manhour': 0
 }
 
 dict_arrived_interval = {
-    'order': -1,
-    'id': 'arrived_interval'
+    'order': -3,
+    'id': 'arrived_interval',
+    'manhour': 0
 }
+
+
+class BasicWorkType(Enum):
+    UNIT_INSTALLATION = dict_installation
+    UNIT_ARRIVED = dict_arrived
+    FLOOR_BUFFER = dict_floor_buffer
+    ARRIVED_INTERVAL = dict_arrived_interval
+
 
 work_type_installation = WorkType(**dict_installation)
 work_type_arrived = WorkType(**dict_arrived)
@@ -100,7 +138,6 @@ class Activity(object):
 class ScheduleInformation(object):
     def __init__(self):
         self.work_type_dict = {}
-        self.__total_unit = 0
         self.__modular_unit_rate = 0
         self.__unit_arrived_interval = 0
         self.__unit_install_time = 0
@@ -157,7 +194,7 @@ class ScheduleInformation(object):
 
     @property
     def total_unit(self):
-        return self.__total_unit
+        return self.__num_unit_in_floor * self.__num_floor
 
     @property
     def unit_install_time(self):
@@ -167,11 +204,27 @@ class ScheduleInformation(object):
     def unit_install_time(self, unit_install_time):
         self.__unit_install_time = unit_install_time
 
+    def total_num_labor(self):
+        sum = 0
+        for work_type in self.work_type_dict.values():
+            sum += work_type.num_labor
+        return sum
+
+    def num_work_type(self):
+        return len(self.work_type_dict)
+
     def get_work_type_from_file(self, filename):
         work_types = pd.read_csv(filename)
         for order, type_info in work_types.iterrows():
-            work_type = WorkType(order + 3, **type_info.to_dict())
+            work_type = WorkType(order + 1, **type_info.to_dict())
             self.work_type_dict[work_type.id] = work_type
+
+    def add_work_type(self, work_type):
+        self.work_type_dict[work_type.id]= work_type
+
+    def print(self):
+        for work_type in self.work_type_dict.values():
+            print(work_type)
 
     def to_schedule(self):
         schedule = Schedule()
@@ -230,6 +283,7 @@ class ScheduleInformation(object):
                     idx = unit_idx + work_type.num_unit_in_group * group_idx
                     if self.total_unit > idx:
                         act.allocated_module_list.append(idx)
+                # print(work_type.id, work_type.num_labor, work_type.num_unit_in_group)
                 act.duration = work_type.get_duration()
                 schedule.activity_dict[key] = act
 
@@ -293,7 +347,8 @@ class Schedule(object):
         return predecessor_list
 
     def __find_arrived_interval_predecessor(self, activity, predecessor_list):
-        exist, predecessor = activity.order == -1, None
+        arrived_Interval_order = BasicWorkType.ARRIVED_INTERVAL.value['order']
+        exist, predecessor = activity.order == arrived_Interval_order, None
         if exist:
             predecessor_key = (dict_arrived['id'], activity.idx - 1)
             successor_key = (dict_arrived['id'], activity.idx)
@@ -304,8 +359,8 @@ class Schedule(object):
         return exist
 
     def __find_same_type_predecessor(self, activity, predecessor_list):
-        # exist, predecessor = activity.idx != 0 and activity.order != 2, None
-        exist, predecessor = activity.idx != 0 and activity.order != -1, None
+        arrived_Interval_order = BasicWorkType.ARRIVED_INTERVAL.value['order']
+        exist, predecessor = activity.idx != 0 and activity.order != arrived_Interval_order, None
         if exist:
             predecessor_key = (activity.work_type.id, activity.idx - 1)
             predecessor = self.activity_dict[predecessor_key]
@@ -313,12 +368,14 @@ class Schedule(object):
         return exist
 
     def __find_floor_predecessor(self, activity, predecessor_list):
-        exist, predecessor = activity.order == 3, None
+        unit_arrived_order = BasicWorkType.UNIT_ARRIVED.value['order']
+        exist, predecessor = activity.order == unit_arrived_order, None
         last_unit = activity.allocated_module_list[-1]
         required_unit = last_unit + self.floor_buffer * self.num_unit_in_floor
         if exist:
             floor_constraint = False
-            floor_activity_list = self.get_activity_list_with_order(2)
+            floor_buffer_order = BasicWorkType.FLOOR_BUFFER.value['order']
+            floor_activity_list = self.get_activity_list_with_order(floor_buffer_order)
             for floor_act in reversed(floor_activity_list):
                 if required_unit in floor_act.allocated_module_list:
                     predecessor = floor_act
@@ -332,7 +389,8 @@ class Schedule(object):
         return exist
 
     def __find_other_type_predecessor(self, activity, predecessor_list):
-        exist, predecessor = activity.order > 3 or activity.order == 2, None
+        floor_buffer_order = BasicWorkType.FLOOR_BUFFER.value['order']
+        exist, predecessor = activity.order > 0 or activity.order == floor_buffer_order, None
         last_unit = activity.allocated_module_list[-1]
         if exist:
             other_type_list = self.get_activity_list_with_order(activity.order - 1)
