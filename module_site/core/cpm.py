@@ -1,5 +1,5 @@
 import networkx as nx
-
+import time
 
 class CPM(nx.DiGraph):
     def __init__(self):
@@ -71,3 +71,5 @@ class CPM(nx.DiGraph):
         self._forward()
         self._make_span = max([self.nodes[j]['act'].cpm_value_dict['EF'] for j in self.nodes], default=0)
         self._backward()
+
+

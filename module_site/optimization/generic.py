@@ -3,6 +3,7 @@ import random
 import numpy as np
 from functools import reduce
 from enum import Enum
+from time import time
 
 
 # to control function (chromosome to chromosome)
@@ -60,10 +61,11 @@ class BinaryLocalAlgorithm(Enum):
         best_chro, best_value = chro_str, func(chro_str)
         for idx in range(0, len(chro_str)):
             new_chro = BinaryGeneric.change_ith_gene(chro_str, idx)
-            new_value = func(new_chro)
-            compare_array = best_value <= func(new_chro)
-            if reduce(lambda x, y: x & y, compare_array):
-                best_chro, best_value = new_chro, new_value
+            if BinaryChromosome.chromosome_fitted_in_geno_space(new_chro):
+                new_value = func(new_chro)
+                compare_array = best_value <= new_value
+                if reduce(lambda x, y: x & y, compare_array):
+                    best_chro, best_value = new_chro, new_value
         return best_chro, best_value
 
     @classmethod
